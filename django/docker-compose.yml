@@ -28,7 +28,7 @@ services:
 
   web:
     build: .
-    command: ./init.sh
+    command: /code/init.sh
     volumes:
       - .:/code
     ports:
