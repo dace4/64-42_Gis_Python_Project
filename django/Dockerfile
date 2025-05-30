@@ -4,13 +4,20 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /code
 
-COPY requirements.txt /code/
+# Copy project files first
+COPY . /code/
 
+# Install Python dependencies
 RUN pip install -r requirements.txt
 
+# Install system dependencies
 RUN apt-get update && \
-    apt-get install -y libproj-dev libfreexl-dev libgdal-dev gdal-bin postgis
+    apt-get install -y \
+    libproj-dev \
+    libfreexl-dev \
+    libgdal-dev \
+    gdal-bin \
+    postgis
 
-COPY /cantons /code/cantons
-COPY /init.sh /code/init.sh
-COPY . /code/
+# Ensure init.sh is executable
+RUN chmod +x /code/init.sh
