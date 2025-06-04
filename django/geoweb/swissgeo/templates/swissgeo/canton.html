@@ -1,0 +1,21 @@
+<head>
+  <link
+    rel="stylesheet"
+    href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+    crossorigin="anonymous"
+  />
+</head>
+
+<ul class="list-group">
+  <li class="list-group-item d-flex justify-content-between align-items-center">
+    <h2>{{cantonobj.name}}</h2>
+    <span class="badge badge-primary badge-pill">Id:{{cantonobj.id}}</span>
+    <span class="badge badge-primary badge-pill"
+      >Area: {{cantonobj.geom.area }}</span
+    >
+    <span class="badge badge-primary badge-pill"
+      ># Polygons: {{cantonobj.geom.num_geom}}</span
+    >
+  </li>
+</ul>

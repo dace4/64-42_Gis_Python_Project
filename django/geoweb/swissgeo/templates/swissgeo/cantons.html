@@ -1,26 +1,182 @@
-{% load leaflet_tags %}
-<head>      
-{% leaflet_js %}    
-{% leaflet_css %} 
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script> 
-</head>
+{% load static leaflet_tags %}
 
-<body>    
-    {% leaflet_map "cantons" callback="main_map_init" %}        
-    <script type="text/javascript">       
-     function main_map_init (map, options) {            
-     var dataurl = '{% url "cantonsjson" %}'            
-     $.getJSON(dataurl, function (data){               
-          L.geoJson(data,{onEachFeature: onEachFeature}).addTo(map); });        
-}                
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Oiken Network Risk Map</title>
 
-function onEachFeature(feature, layer) {
-    if (feature.properties && 
-          feature.properties.name) {                  
-       layer.bindPopup(feature.properties.name);            
-    }                    
-}
-      
- </script>    
- </body>
- 
+    {% leaflet_js %} {% leaflet_css %}
+
+    <link
+      rel="stylesheet"
+      href="//cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css"
+    />
+    <script src="//cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f5f7fa;
+      }
+
+      #map {
+        height: 100%;
+        width: 100%;
+      }
+
+      h2 {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(6px);
+        padding: 12px 24px;
+        border-radius: 12px;
+        z-index: 1000;
+        font-weight: 700;
+        color: #333;
+        font-size: 22px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .legend {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 12px 14px;
+        border-radius: 8px;
+        line-height: 1.8em;
+        font-size: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+      }
+
+      .legend:hover {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      }
+
+      .legend i {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        margin-right: 8px;
+        border-radius: 50%;
+        vertical-align: middle;
+      }
+
+      /* Optional: style the Leaflet controls */
+      .leaflet-control-layers {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border-radius: 8px !important;
+        padding: 6px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>Oiken Network Risk Map</h2>
+
+    <div id="map"></div>
+
+    <script type="text/javascript">
+      // Init map centered on Sion
+      var map = L.map("map", {
+        zoomSnap: 0.5,
+        zoomDelta: 0.5,
+        wheelPxPerZoomLevel: 60,
+      }).setView([46.23, 7.36], 11);
+
+      // Basemap
+      var osmLayer = L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          attribution: "&copy; OpenStreetMap contributors",
+        }
+      ).addTo(map);
+
+      // --- CANTONS Layer ---
+      var cantonsLayer = L.layerGroup();
+
+      $.getJSON("{% url 'cantonsjson' %}", function (data) {
+        L.geoJson(data, {
+          style: { color: "blue", weight: 2, fillOpacity: 0.1 },
+          interactive: false, // disable interaction so clicks go through
+        }).addTo(cantonsLayer);
+      });
+
+      cantonsLayer.addTo(map);
+
+      // --- Network Lines Layer ---
+      var networkLinesLayer = L.layerGroup();
+      $.getJSON(
+        "{% static 'geojson/network_lines.geojson' %}",
+        function (data) {
+          L.geoJson(data, {
+            style: { color: "orange", weight: 3 },
+            onEachFeature: function (feature, layer) {
+              layer.bindPopup(feature.properties.name);
+            },
+          }).addTo(networkLinesLayer);
+        }
+      );
+      networkLinesLayer.addTo(map);
+
+      // --- Nodes & Incidents Layer ---
+      var nodesLayer = L.layerGroup();
+      $.getJSON("{% static 'geojson/nodes.geojson' %}", function (data) {
+        L.geoJson(data, {
+          pointToLayer: function (feature, latlng) {
+            var color =
+              feature.properties.type === "incident" ? "red" : "green";
+            return L.circleMarker(latlng, {
+              radius: 8,
+              fillColor: color,
+              color: "#000",
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.8,
+            });
+          },
+          onEachFeature: function (feature, layer) {
+            layer.bindPopup(feature.properties.name);
+          },
+        }).addTo(nodesLayer);
+      });
+      nodesLayer.addTo(map);
+
+      // --- Layer Control ---
+      var overlays = {
+        "Swiss Cantons": cantonsLayer,
+        "Network Lines": networkLinesLayer,
+        "Nodes & Incidents": nodesLayer,
+      };
+
+      L.control.layers(null, overlays).addTo(map);
+
+      // --- Custom Legend as Leaflet Control ---
+      var legend = L.control({ position: "bottomright" });
+
+      legend.onAdd = function (map) {
+        var div = L.DomUtil.create("div", "legend");
+        div.innerHTML +=
+          "<div><i style='background: orange'></i> Network Line</div>";
+        div.innerHTML +=
+          "<div><i style='background: blue; border-radius: 0'></i> Swiss Canton</div>";
+        div.innerHTML +=
+          "<div><i style='background: green'></i> Network Node</div>";
+        div.innerHTML += "<div><i style='background: red'></i> Incident</div>";
+        return div;
+      };
+
+      legend.addTo(map);
+    </script>
+  </body>
+</html>
