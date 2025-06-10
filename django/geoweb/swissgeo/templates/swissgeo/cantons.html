@@ -85,15 +85,14 @@
     <h2>Oiken Network Risk Map</h2>
 
     <div id="map"></div>
-
-    <script type="text/javascript">
+      <script type="text/javascript">
       // Init map centered on Sion
       var map = L.map("map", {
         zoomSnap: 0.5,
         zoomDelta: 0.5,
         wheelPxPerZoomLevel: 60,
       }).setView([46.23, 7.36], 11);
-
+    
       // Basemap
       var osmLayer = L.tileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -101,19 +100,19 @@
           attribution: "&copy; OpenStreetMap contributors",
         }
       ).addTo(map);
-
+      
       // --- CANTONS Layer ---
       var cantonsLayer = L.layerGroup();
-
+      
       $.getJSON("{% url 'cantonsjson' %}", function (data) {
         L.geoJson(data, {
           style: { color: "blue", weight: 2, fillOpacity: 0.1 },
-          interactive: false, // disable interaction so clicks go through
+          interactive: false,
         }).addTo(cantonsLayer);
       });
-
+    
       cantonsLayer.addTo(map);
-
+    
       // --- Network Lines Layer ---
       var networkLinesLayer = L.layerGroup();
       $.getJSON(
@@ -128,7 +127,7 @@
         }
       );
       networkLinesLayer.addTo(map);
-
+      
       // --- Nodes & Incidents Layer ---
       var nodesLayer = L.layerGroup();
       $.getJSON("{% static 'geojson/nodes.geojson' %}", function (data) {
@@ -151,19 +150,41 @@
         }).addTo(nodesLayer);
       });
       nodesLayer.addTo(map);
-
-      // --- Layer Control ---
-      var overlays = {
-        "Swiss Cantons": cantonsLayer,
-        "Network Lines": networkLinesLayer,
-        "Nodes & Incidents": nodesLayer,
-      };
-
-      L.control.layers(null, overlays).addTo(map);
-
+    
+      // --- Houses Layer ---
+      var housesLayer;  // GLOBAL VARIABLE declared here!
+    
+        $.getJSON("{% url 'housesjson' %}", function (data) {
+            console.log("Houses GeoJSON loaded", data);
+        
+            var geojsonLayer = L.geoJson(data, {
+                style: { color: "purple", weight: 1, fillOpacity: 0.6 },
+                onEachFeature: function (feature, layer) {
+                    console.log("Adding house feature:", feature);
+                    layer.bindPopup("Name: " + feature.properties.name);
+                }
+            });
+          
+            window.housesLayer = L.layerGroup([geojsonLayer]);
+            window.housesLayer.addTo(map);
+          
+            // Optional: fit map to houses bounds
+            map.fitBounds(geojsonLayer.getBounds());
+          
+            // Now create the Layer Control here!
+            var overlays = {
+                "Swiss Cantons": cantonsLayer,
+                "Network Lines": networkLinesLayer,
+                "Nodes & Incidents": nodesLayer,
+                "Houses of Sion": window.housesLayer
+            };
+          
+            L.control.layers(null, overlays).addTo(map);
+        });
+    
       // --- Custom Legend as Leaflet Control ---
       var legend = L.control({ position: "bottomright" });
-
+    
       legend.onAdd = function (map) {
         var div = L.DomUtil.create("div", "legend");
         div.innerHTML +=
@@ -173,9 +194,10 @@
         div.innerHTML +=
           "<div><i style='background: green'></i> Network Node</div>";
         div.innerHTML += "<div><i style='background: red'></i> Incident</div>";
+        div.innerHTML += "<div><i style='background: purple'></i> House</div>";
         return div;
       };
-
+    
       legend.addTo(map);
     </script>
   </body>

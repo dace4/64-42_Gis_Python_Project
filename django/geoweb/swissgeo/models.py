@@ -27,4 +27,13 @@ class Canton(models.Model):
      
      def __str__(self):        
         return self.name
-
+     
+class House(models.Model):    
+    house_id = models.IntegerField(default=0, primary_key=True)
+    name = models.CharField(max_length=100)
+    geom = models.MultiPolygonField(srid=4326, null=True)    
+      
+    def __str__(self):        
+        return f"House{self.house_id}"
+    class Meta:        
+        db_table = "houses"

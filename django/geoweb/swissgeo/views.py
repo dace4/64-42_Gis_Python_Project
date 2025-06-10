@@ -6,7 +6,7 @@ from django.http import HttpResponse
 def index(request):    
    return HttpResponse("Hi there this is Switzerland")
 
-from .models import City, Canton
+from .models import City, Canton, House
 
 from django.template import loader
 
@@ -45,3 +45,10 @@ def cantons(request):
    context ={    }        
    return render(request,
      'swissgeo/cantons.html',context)
+
+def housesjson(request):
+   houses = House.objects.all()
+   ser = serialize('geojson', houses,
+                   geometry_field='geom',
+                   fields=('house_id','name',))
+   return HttpResponse(ser)

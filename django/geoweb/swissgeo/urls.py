@@ -8,5 +8,5 @@ urlpatterns = [
     path('cantons/<str:canton_name>', views.canton, name='canton'),
     path('cantons.json', views.cantonsjson, name='cantonsjson'),
     path('cantons', views.cantons, name='cantons'),
-
+    path('houses.json', views.housesjson, name='housesjson'),
 ]
