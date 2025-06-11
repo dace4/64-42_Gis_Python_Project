@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Node A" },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [7.1, 46.25]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Node B" },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [7.3, 46.35]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Node C" },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [7.5, 46.15]
+      }
+    }
+  ]
+}

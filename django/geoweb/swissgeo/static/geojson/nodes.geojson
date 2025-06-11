@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Node A", "type": "node" },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [7.37, 46.23]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Incident A", "type": "incident" },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [7.36, 46.25]
+      }
+    }
+  ]
+}

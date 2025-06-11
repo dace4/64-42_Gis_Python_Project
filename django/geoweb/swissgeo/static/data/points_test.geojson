@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Noeud A", "type": "node" },
+      "geometry": { "type": "Point", "coordinates": [7.45, 46.28] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Noeud B", "type": "node" },
+      "geometry": { "type": "Point", "coordinates": [7.5, 46.3] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Incident A", "type": "incident" },
+      "geometry": { "type": "Point", "coordinates": [7.48, 46.31] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Incident B", "type": "incident" },
+      "geometry": { "type": "Point", "coordinates": [7.55, 46.33] }
+    }
+  ]
+}
