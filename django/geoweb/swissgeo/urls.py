@@ -12,5 +12,5 @@ urlpatterns = [
     path('incidents.json', views.incidentsjson, name='incidentsjson'),
     path('nodes.json', views.nodesjson, name='nodesjson'),
     path('network_lines.json', views.networklinesjson, name='networklinesjson'),
-
+    path('map', views.map_view, name='map'),
 ]

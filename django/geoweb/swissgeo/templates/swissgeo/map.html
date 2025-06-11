@@ -14,6 +14,9 @@
       crossorigin=""
     />
 
+    <!-- JQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
     <!-- Leaflet JS -->
     <script
       src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"
@@ -21,12 +24,49 @@
       crossorigin=""
     ></script>
 
-    <!-- JQuery -->
-    <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-
     <style>
       #swissmap {
         height: 90vh;
+      }
+
+      /* ────────── panneau incidents ────────── */
+      #incident-panel {
+        position: absolute;
+        top: 80px;
+        right: 10px;
+        width: 260px;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 13px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        z-index: 999;
+      }
+      #incident-panel h3 {
+        margin: 0 0 6px 0;
+        font-size: 14px;
+        color: #333;
+        text-align: center;
+      }
+      #incident-log {
+        height: 150px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 5px;
+        margin-bottom: 8px;
+        background: #f9f9f9;
+      }
+      #export-btn {
+        width: 100%;
+        padding: 6px 0;
+        background: #007bff;
+        border: none;
+        color: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #export-btn:hover {
+        background: #0056b3;
       }
     </style>
   </head>
@@ -34,16 +74,25 @@
   <body>
     <h1>Oiken Network Risk Map</h1>
 
+    <!-- carte -->
     <div id="swissmap"></div>
 
+    <!-- panneau incidents -->
+    <div id="incident-panel">
+      <h3>Incidents simulés</h3>
+      <div id="incident-log"></div>
+      <button id="export-btn">📁 Exporter GeoJSON</button>
+    </div>
+
+    <!-- création/initialisation de la carte Leaflet -->
     <script type="text/javascript">
-      // declare tile layers
+      // ─── tuiles de fond ──────────────────────────────────────────────────────
       var OpenTopoMap = L.tileLayer(
         "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
         {
           maxZoom: 17,
           attribution:
-            'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+            'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Map style &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
         }
       );
 
@@ -64,7 +113,7 @@
         "https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}",
         {
           attribution:
-            'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            'Map tiles by <a href="http://stamen.com">Stamen Design</a> — Map data &copy; OpenStreetMap contributors',
           subdomains: "abcd",
           minZoom: 1,
           maxZoom: 16,
@@ -72,44 +121,23 @@
         }
       );
 
-      // naming the tile layers
+      // nommage des couches de fond
       var baseMaps = {
         Watercolor: Stamen_Watercolor,
         OpenTopo: OpenTopoMap,
-        OSM: OpenStreetMap_CH,
+        OSM_CH: OpenStreetMap_CH,
       };
 
-      // create the Leaflet map
+      // ─── carte Leaflet ───────────────────────────────────────────────────────
       var themap = L.map("swissmap", {
-        layers: [OpenTopoMap], // Initial layer
+        layers: [OpenTopoMap], // couche initiale
       }).setView([46.8, 8], 8);
 
-      // add base layer control
+      // contrôle des couches
       L.control.layers(baseMaps, null).addTo(themap);
-
-      // example marker / circle / polygon (you can remove or keep as demo)
-      var marker = L.marker([46.134666, 7.62216]).addTo(themap);
-      var circle = L.circle([46.7, 7.85], {
-        color: "red",
-        fillColor: "#f03",
-        fillOpacity: 0.5,
-        radius: 5000,
-      }).addTo(themap);
-      var polygon = L.polygon([
-        [46.7, 7.85],
-        [47.3, 7.99],
-        [47.1, 8.3],
-        [46.66, 8.6],
-        [46.51, 8.1],
-      ]).addTo(themap);
-
-      // popups
-      marker.bindPopup("The town of Zinal in Valais").openPopup();
-      circle.bindPopup("A circle near Interlaken.");
-      polygon.bindPopup("The area of a new Swiss canton.");
     </script>
 
-    <!-- VERY IMPORTANT : load your map.js here -->
+    <!-- logique réseau + simulation -->
     <script src="{% static 'js/map.js' %}"></script>
   </body>
 </html>

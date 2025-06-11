@@ -71,3 +71,10 @@ def networklinesjson(request):
     network_lines = NetworkLine.objects.all()
     ser = serialize('geojson', network_lines, geometry_field='geom', fields=('id',))
     return HttpResponse(ser, content_type='application/json')
+
+# views.py
+
+from django.shortcuts import render
+
+def map_view(request):
+    return render(request, 'swissgeo/map.html')
