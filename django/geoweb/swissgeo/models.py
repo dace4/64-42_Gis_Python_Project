@@ -39,13 +39,33 @@ class House(models.Model):
         db_table = "houses"
 
 class Incident(models.Model):
-    incident_id = models.IntegerField(default=0, primary_key=True)
-    name = models.CharField(max_length=100)
-    severity = models.CharField(max_length=50)
+    id = models.IntegerField(primary_key=True)
     geom = models.PointField(srid=4326, null=True)
 
+    class Meta:
+        db_table = 'incidents'
+
     def __str__(self):
-        return f"Incident: {self.name} ({self.severity})"
+        return str(self.id)
+
+class NetworkLine(models.Model):
+    id = models.IntegerField(default=0, primary_key=True)  # not line_id !
+    geom = models.MultiLineStringField(srid=4326, null=True)
 
     class Meta:
-        db_table = "incidents"
+        db_table = "network_lines"
+
+    def __str__(self):
+        return f"Line {self.id}"  # also use id
+
+
+class Node(models.Model):
+    id = models.IntegerField(default=0, primary_key=True)  # not node_id !
+    geom = models.PointField(srid=4326, null=True)
+
+    class Meta:
+        db_table = "nodes"
+
+    def __str__(self):
+        return f"Node {self.id}"  # also use id
+

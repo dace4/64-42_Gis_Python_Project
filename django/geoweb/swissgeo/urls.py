@@ -10,5 +10,7 @@ urlpatterns = [
     path('cantons', views.cantons, name='cantons'),
     path('houses.json', views.housesjson, name='housesjson'),
     path('incidents.json', views.incidentsjson, name='incidentsjson'),
+    path('nodes.json', views.nodesjson, name='nodesjson'),
+    path('network_lines.json', views.networklinesjson, name='networklinesjson'),
 
 ]
