@@ -9,4 +9,6 @@ urlpatterns = [
     path('cantons.json', views.cantonsjson, name='cantonsjson'),
     path('cantons', views.cantons, name='cantons'),
     path('houses.json', views.housesjson, name='housesjson'),
+    path('incidents.json', views.incidentsjson, name='incidentsjson'),
+
 ]

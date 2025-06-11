@@ -176,11 +176,39 @@
                 "Swiss Cantons": cantonsLayer,
                 "Network Lines": networkLinesLayer,
                 "Nodes & Incidents": nodesLayer,
-                "Houses of Sion": window.housesLayer
+                "Houses of Sion": window.housesLayer,
+                "Incidents": incidentsLayer
             };
           
             L.control.layers(null, overlays).addTo(map);
         });
+
+      // --- Incidents Layer ---
+      var incidentsLayer = L.layerGroup();
+
+      $.getJSON("/swissgeo/incidents.json", function (data) {
+          L.geoJson(data, {
+              pointToLayer: function (feature, latlng) {
+                  return L.circleMarker(latlng, {
+                      radius: 10,
+                      fillColor: "red",
+                      color: "#000",
+                      weight: 1,
+                      opacity: 1,
+                      fillOpacity: 0.9
+                  });
+              },
+              onEachFeature: function (feature, layer) {
+                  layer.bindPopup(
+                      "<b>Incident:</b> " + feature.properties.name + "<br>" +
+                      "<b>Severity:</b> " + feature.properties.severity
+                  );
+              }
+          }).addTo(incidentsLayer);
+      });
+
+      incidentsLayer.addTo(map);
+
     
       // --- Custom Legend as Leaflet Control ---
       var legend = L.control({ position: "bottomright" });
@@ -195,6 +223,7 @@
           "<div><i style='background: green'></i> Network Node</div>";
         div.innerHTML += "<div><i style='background: red'></i> Incident</div>";
         div.innerHTML += "<div><i style='background: purple'></i> House</div>";
+        div.innerHTML += "<div><i style='background: red'></i> Incident</div>";
         return div;
       };
     

@@ -37,3 +37,15 @@ class House(models.Model):
         return f"House{self.house_id}"
     class Meta:        
         db_table = "houses"
+
+class Incident(models.Model):
+    incident_id = models.IntegerField(default=0, primary_key=True)
+    name = models.CharField(max_length=100)
+    severity = models.CharField(max_length=50)
+    geom = models.PointField(srid=4326, null=True)
+
+    def __str__(self):
+        return f"Incident: {self.name} ({self.severity})"
+
+    class Meta:
+        db_table = "incidents"
