@@ -16,100 +16,32 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
     <style>
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: #f5f7fa;
-      }
-      #map {
-        height: 100%;
-        width: 100%;
-      }
+      html, body { height: 100%; margin: 0; padding: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+      #map { height: 100%; width: 100%; }
       h2 {
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(255, 255, 255, 0.75);
-        padding: 12px 24px;
-        border-radius: 12px;
-        z-index: 1000;
-        font-weight: 700;
-        font-size: 22px;
+        position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.75); padding: 12px 24px; border-radius: 12px; z-index: 1000; font-weight: 700; font-size: 22px;
       }
       .legend {
-        background: rgba(255, 255, 255, 0.95);
-        padding: 12px 14px;
-        border-radius: 8px;
-        line-height: 1.8em;
-        font-size: 15px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.95); padding: 12px 14px; border-radius: 8px; line-height: 1.8em; font-size: 15px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       }
       .legend i {
-        display: inline-block;
-        width: 14px;
-        height: 14px;
-        margin-right: 8px;
-        border-radius: 50%;
-        vertical-align: middle;
+        display: inline-block; width: 14px; height: 14px; margin-right: 8px; border-radius: 50%; vertical-align: middle;
       }
       .leaflet-control-layers {
-        background: rgba(255, 255, 255, 0.9) !important;
-        border-radius: 8px !important;
-        padding: 6px !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        background: rgba(255, 255, 255, 0.9) !important; border-radius: 8px !important; padding: 6px !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
       }
       #incident-panel {
-        position: absolute;
-        top: 80px;
-        right: 10px;
-        width: 260px;
-        background: #fff;
-        border-radius: 8px;
-        padding: 10px;
-        font-size: 13px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-        z-index: 999;
+        position: absolute; top: 80px; right: 10px; width: 260px; background: #fff; border-radius: 8px; padding: 10px; font-size: 13px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); z-index: 999;
       }
-      #incident-log {
-        height: 150px;
-        overflow-y: auto;
-        border: 1px solid #ccc;
-        padding: 5px;
-        margin-bottom: 8px;
-        background: #f9f9f9;
-      }
-      #incident-log div {
-        padding: 2px;
-        margin-bottom: 3px;
-        background: #eee;
-        border-radius: 3px;
-      }
-      #export-btn,
-      #reset-btn {
-        width: 100%;
-        padding: 6px 0;
-        border: none;
-        color: #fff;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      #export-btn {
-        background: #007bff;
-      }
-      #export-btn:hover {
-        background: #0056b3;
-      }
-      #reset-btn {
-        background: #dc3545;
-        margin-top: 6px;
-      }
-      #reset-btn:hover {
-        background: #bb2d3b;
-      }
+      #incident-log { height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; margin-bottom: 8px; background: #f9f9f9; }
+      #incident-log div { padding: 2px; margin-bottom: 3px; background: #eee; border-radius: 3px; }
+      #export-btn, #reset-btn { width: 100%; padding: 6px 0; border: none; color: #fff; border-radius: 4px; cursor: pointer; }
+      #export-btn { background: #007bff; }
+      #export-btn:hover { background: #0056b3; }
+      #reset-btn { background: #dc3545; margin-top: 6px; }
+      #reset-btn:hover { background: #bb2d3b; }
     </style>
   </head>
 
@@ -131,15 +63,14 @@
         attribution: "&copy; OpenStreetMap contributors",
       }).addTo(window.map);
 
-      // Groupes
+      // Layer groups
       window.cantonsLayer = L.layerGroup().addTo(window.map);
       window.networkLinesLayer = L.layerGroup().addTo(window.map);
       window.nodesLayer = L.layerGroup().addTo(window.map);
       window.incidentsLayer = L.geoJSON(null).addTo(window.map);
-
       window.housesLayer = L.layerGroup().addTo(window.map);
 
-      // helpers
+      // Helper to load GeoJSON layers
       const loadLayer = (url, opts, layer) =>
         $.getJSON(url, (d) =>
           L.geoJson(d, opts).eachLayer((lg) => layer.addLayer(lg))
@@ -155,7 +86,7 @@
         window.cantonsLayer
       );
 
-      // Lignes
+      // Network lines
       loadLayer(
         "/swissgeo/network_lines.json",
         {
@@ -166,26 +97,17 @@
         window.networkLinesLayer
       );
 
-      // Nœuds (▶︎ icônes png)
+      // Houses
       loadLayer(
-        "/swissgeo/nodes.json",
+        "{% url 'housesjson' %}",
         {
-          pointToLayer: (f, ll) =>
-            L.marker(ll, {
-              icon: L.icon({
-                iconUrl: "/static/icons/node.png",
-                iconSize: [25, 25],
-              }),
-            }),
-          onEachFeature: (f, l) => {
-            l.feature = f; // ⬅️ clé de la correction : lie chaque layer à son GeoJSON feature
-            l.bindPopup(`Node ID: ${f.properties.node_id || f.properties.id}`);
-          },
+          style: { color: "purple", weight: 1, fillOpacity: 0.6 },
+          onEachFeature: (f, l) => l.bindPopup(`Name: ${f.properties.name}`),
         },
-        window.nodesLayer
+        window.housesLayer
       );
 
-      // Incidents init
+      // Incident points
       loadLayer(
         "/swissgeo/incidents.json",
         {
@@ -200,33 +122,69 @@
         window.incidentsLayer
       );
 
-      // Maisons
+      // Nodes (with outage simulation logic!)
       loadLayer(
-        "{% url 'housesjson' %}",
+        "/swissgeo/nodes.json",
         {
-          style: { color: "purple", weight: 1, fillOpacity: 0.6 },
-          onEachFeature: (f, l) => l.bindPopup(`Name: ${f.properties.name}`),
+          pointToLayer: (f, ll) =>
+            L.marker(ll, {
+              icon: L.icon({
+                iconUrl: "/static/icons/node.png",
+                iconSize: [25, 25],
+              }),
+            }),
+          onEachFeature: (f, l) => {
+            l.feature = f;
+            l.bindPopup(`Node ID: ${f.properties.node_id || f.properties.id}`);
+
+            // === OUTAGE/AFFECTED HOUSES LOGIC ===
+            l.on("click", function(e) {
+              // Optional: Reset all house styles first
+              window.housesLayer.eachLayer(function(houseLayer) {
+                houseLayer.setStyle({ fillColor: "purple", color: "#444" });
+              });
+
+              // Node coordinates
+              const nodeLatLng = e.latlng;
+              const bufferMeters = 30; // Change this to adjust distance
+
+              // Highlight affected houses (multipolygon-friendly!)
+              window.housesLayer.eachLayer(function(houseLayer) {
+                const polygons = houseLayer.getLatLngs();
+                let minDistance = Infinity;
+                polygons.forEach(function(polygon) {
+                  // polygon: array of rings, each ring is array of LatLngs
+                  polygon.forEach(function(ring) {
+                    ring.forEach(function(latlng) {
+                      const dist = nodeLatLng.distanceTo(latlng);
+                      if (dist < minDistance) minDistance = dist;
+                    });
+                  });
+                });
+                if (minDistance < bufferMeters) {
+                  houseLayer.setStyle({ fillColor: "red", color: "red" });
+                }
+              });
+            });
+          },
         },
-        window.housesLayer
+        window.nodesLayer
       );
 
-      // Légende
+      // Legend
       const legend = L.control({ position: "bottomright" });
       legend.onAdd = () => {
         const d = L.DomUtil.create("div", "legend");
-        d.innerHTML +=
-          "<div><i style='background:orange'></i> Network Line</div>";
-        d.innerHTML +=
-          "<div><i style='background:blue;border-radius:0'></i> Swiss Canton</div>";
-        d.innerHTML +=
-          "<div><i style='background:green'></i> Network Node</div>";
+        d.innerHTML += "<div><i style='background:orange'></i> Network Line</div>";
+        d.innerHTML += "<div><i style='background:blue;border-radius:0'></i> Swiss Canton</div>";
+        d.innerHTML += "<div><i style='background:green'></i> Network Node</div>";
         d.innerHTML += "<div><i style='background:red'></i> Incident</div>";
         d.innerHTML += "<div><i style='background:purple'></i> House</div>";
         return d;
       };
       legend.addTo(window.map);
 
-      // Contrôle couches
+      // Layer control
       L.control
         .layers(null, {
           "Swiss Cantons": window.cantonsLayer,
@@ -236,9 +194,13 @@
           Incidents: window.incidentsLayer,
         })
         .addTo(window.map);
-    </script>
 
-    <!-- === logique simulation === -->
-    <script src="{% static 'js/map.js' %}"></script>
+      // === Reset logic: restore house colors ===
+      document.getElementById("reset-btn").addEventListener("click", function() {
+        window.housesLayer.eachLayer(function(houseLayer) {
+          houseLayer.setStyle({ fillColor: "purple", color: "#444" });
+        });
+      });
+    </script>
   </body>
 </html>
