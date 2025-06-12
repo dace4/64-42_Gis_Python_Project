@@ -48,7 +48,7 @@ Uses **PostGIS** for spatial data, **Leaflet.js** for interactive mapping, and *
 ## How to Use
 
 - **Map controls:** Explore power lines, nodes and houses on the map.
-- **Simulate outage:** Click on a green node to simulate a network failure. Houses within 100 meters will be highlighted in red.
+- **Simulate outage:** Click on a green node to simulate a network failure. Houses within 30 meters will be highlighted in red.
 - **Reset:** Use the Reset button to clear the simulation and restore house colors.
 
 ---
