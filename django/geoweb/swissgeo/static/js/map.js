@@ -22,6 +22,8 @@ const iconAffected = L.icon({
 
 /* ─── Variables runtime ───────────────────────────────────────────── */
 let incidentFeatures = [];
+let nodeCoords = {}; 
+const nodeGraph = {};
 
 /* ─── Fonctions utilitaires ───────────────────────────────────────── */
 const haversine = (a, b) => {
@@ -44,10 +46,58 @@ const haversine = (a, b) => {
 const nearLine = (ll, coords, th = 20) =>
   coords.some((c) => haversine([ll.lng, ll.lat], c) < th);
 
+/* ─── Construction du graphe ──────────────────────────────────────── */
+function buildNodeGraph() {
+  nodeCoords = {};
+
+  nodesLayer.eachLayer((n) => {
+    const rawId = n.feature?.properties?.id ?? n.feature?.properties?.node_id;
+    const id = parseInt(rawId);
+    if (isNaN(id)) return;
+
+    const latlng = n.getLatLng();
+    nodeCoords[id] = [latlng.lng, latlng.lat];
+    nodeGraph[id] = [];
+  });
+
+  linesLayer.eachLayer((l) => {
+    const coords = l.feature.geometry.coordinates[0];
+    const endpoints = [coords[0], coords[coords.length - 1]];
+    const nearNodes = [];
+
+    endpoints.forEach((pt) => {
+      let closest = null;
+      let minDist = Infinity;
+      for (const [id, coord] of Object.entries(nodeCoords)) {
+        const dist = haversine(coord, pt);
+        const parsedId = parseInt(id);
+        if (!isNaN(parsedId) && dist < 20 && dist < minDist) {
+          closest = parsedId;
+          minDist = dist;
+        }
+      }
+      if (closest !== null) nearNodes.push(closest);
+    });
+
+    if (nearNodes.length === 2) {
+      const [a, b] = nearNodes;
+      if (!nodeGraph[a]) nodeGraph[a] = [];
+      if (!nodeGraph[b]) nodeGraph[b] = [];
+      if (!nodeGraph[a].includes(b)) nodeGraph[a].push(b);
+      if (!nodeGraph[b].includes(a)) nodeGraph[b].push(a);
+    }
+  });
+
+  console.log("Graphe de connexions :", nodeGraph);
+}
+
 /* ─── Simulation d'incident ───────────────────────────────────────── */
 function simulateIncident(feature, layer) {
   if (feature.properties.isIncident) return;
   feature.properties.isIncident = true;
+
+  const rawId = feature.properties?.node_id ?? feature.properties?.id;
+  const nodeId = rawId !== undefined ? rawId : "inconnu";
 
   const ll = layer.getLatLng();
   layer.setIcon(iconIncident);
@@ -55,11 +105,12 @@ function simulateIncident(feature, layer) {
   const incident = {
     type: "Feature",
     properties: {
-      node_id: feature.properties.node_id || feature.properties.id || "inconnu",
+      node_id: nodeId,
       timestamp: new Date().toISOString(),
     },
     geometry: { type: "Point", coordinates: [ll.lng, ll.lat] },
   };
+
   incidentsLayer.addLayer(
     L.geoJSON(incident, {
       pointToLayer: (f, latlng) =>
@@ -76,74 +127,103 @@ function simulateIncident(feature, layer) {
   // Historique
   const log = document.getElementById("incident-log");
   const div = document.createElement("div");
-  div.textContent = `Nœud ${
-    incident.properties.node_id
-  } – ${new Date().toLocaleTimeString()}`;
+  div.textContent = `Nœud ${nodeId} – ${new Date().toLocaleTimeString()}`;
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
 
   // Propagation
-  const impactedLines = [];
-  linesLayer.eachLayer((ln) => {
-    if (nearLine(ll, ln.feature.geometry.coordinates)) {
-      ln.setStyle({
-        color: "#FF0000",
-        weight: 8,
-        dashArray: "4 4",
-        opacity: 1,
-      });
-      ln.bringToFront(); // ← ajoute ceci
-
-      impactedLines.push(ln);
-    }
-  });
-
-  // Maisons impactées
-  housesLayer.eachLayer((h) => {
-    const center = h.getBounds().getCenter();
-    if (
-      impactedLines.some((ln) =>
-        ln.feature.geometry.coordinates.some(
-          (c) => haversine([center.lng, center.lat], c) < 30
-        )
-      )
-    ) {
-      h.setStyle({
-        color: "#000000",
-        weight: 3,
-        fillColor: "#FF3333",
-        fillOpacity: 1,
-      });
-      h.bringToFront(); // ← ajoute ceci
-
-      h.bindTooltip("🏠 Maison impactée").openTooltip();
-    }
-  });
-
-  // Nœuds voisins
-  nodesLayer.eachLayer((n) => {
-    if (n === layer) return;
-    const np = [n.getLatLng().lng, n.getLatLng().lat];
-    if (
-      impactedLines.some((ln) =>
-        ln.feature.geometry.coordinates.some((c) => haversine(np, c) < 15)
-      )
-    ) {
-      n.setIcon(iconAffected);
-    }
-  });
+  propagateIncident(nodeId);
 }
 
-/* ─── Bind du clic sur tous les markers de nœud ───────────────────── */
-setTimeout(() => {
-  nodesLayer.eachLayer((m) => {
-    if (m.feature) {
-      m.on("click", () => simulateIncident(m.feature, m));
-    }
-  });
-}, 500);
+/* ─── Propagation intelligente ────────────────────────────────────── */
+function propagateIncident(startId) {
+  const visited = new Set();
+  const queue = [parseInt(startId)];
 
-/* ─── Export GeoJSON des incidents ────────────────────────────────── */
+  while (queue.length > 0) {
+    const current = queue.shift();
+    visited.add(current);
+
+    const coords = nodeCoords[current];
+    if (!coords) {
+      console.warn("Coordonnées manquantes pour le nœud", current);
+      continue;
+    }
+
+    nodesLayer.eachLayer((n) => {
+      const id = parseInt(n.feature?.properties?.id);
+      if (id === current && !n.feature.properties.isIncident) {
+        n.setIcon(iconAffected);
+        n.feature.properties.isIncident = true;
+      }
+    });
+
+    linesLayer.eachLayer((l) => {
+      const coordsData = l.feature?.geometry?.coordinates;
+      if (!Array.isArray(coordsData) || !coordsData[0]) return;
+
+      const mergedCoords = coordsData.flat();
+
+  if (
+    mergedCoords.some(
+      (c) => haversine(c, coords) < 25
+    )
+  ) {
+    l.setStyle({
+      color: "#FF6600",
+      weight: 6,
+      dashArray: "4 4",
+      opacity: 0.9,
+    });
+    l.bringToFront();
+    l.bindTooltip("⚡ Ligne coupée").openTooltip();
+
+    housesLayer.eachLayer((h) => {
+      const center = h.getBounds().getCenter();
+      if (
+        mergedCoords.some(
+          (c) => haversine([center.lng, center.lat], c) < 30
+        )
+      ) {
+        h.setStyle({
+          color: "#000000",
+          fillColor: "#FF6666",
+          weight: 2,
+          fillOpacity: 1,
+        });
+        h.bringToFront();
+        h.bindTooltip("🏠 Maison affectée").openTooltip();
+      }
+    });
+  }
+});
+
+    const neighbors = nodeGraph[current] || [];
+    for (const neighbor of neighbors) {
+      if (!visited.has(neighbor)) {
+        queue.push(neighbor);
+        visited.add(neighbor);
+      }
+    }
+  }
+}
+
+/* ─── Bind des clics ──────────────────────────────────────────────── */
+const waitForNodes = setInterval(() => {
+  if (nodesLayer.getLayers().length > 0) {
+    clearInterval(waitForNodes);
+
+    nodesLayer.eachLayer((m) => {
+      if (m.feature) {
+        m.on("click", () => simulateIncident(m.feature, m));
+      }
+    });
+
+    buildNodeGraph();
+  }
+}, 200);
+
+/* ─── Export GeoJSON ──────────────────────────────────────────────── */
 document.getElementById("export-btn").addEventListener("click", () => {
   if (!incidentFeatures.length) return alert("Aucun incident simulé.");
 
@@ -165,7 +245,7 @@ document.getElementById("export-btn").addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
-/* ─── Reset complet ───────────────────────────────────────────────── */
+/* ─── Reset complet ──────────────────────────────────────────────── */
 document.getElementById("reset-btn").addEventListener("click", () => {
   incidentFeatures = [];
   incidentsLayer.clearLayers();
