@@ -16,208 +16,191 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
     <style>
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f5f7fa;
-      }
-
-      #map {
-        height: 100%;
-        width: 100%;
-      }
-
+      html, body { height: 100%; margin: 0; padding: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+      #map { height: 100%; width: 100%; }
       h2 {
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(255, 255, 255, 0.75);
-        backdrop-filter: blur(6px);
-        padding: 12px 24px;
-        border-radius: 12px;
-        z-index: 1000;
-        font-weight: 700;
-        color: #333;
-        font-size: 22px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.75); padding: 12px 24px; border-radius: 12px; z-index: 1000; font-weight: 700; font-size: 22px;
       }
-
       .legend {
-        background: rgba(255, 255, 255, 0.95);
-        padding: 12px 14px;
-        border-radius: 8px;
-        line-height: 1.8em;
-        font-size: 15px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.95); padding: 12px 14px; border-radius: 8px; line-height: 1.8em; font-size: 15px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       }
-
-      .legend:hover {
-        background: rgba(255, 255, 255, 1);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-      }
-
       .legend i {
-        display: inline-block;
-        width: 14px;
-        height: 14px;
-        margin-right: 8px;
-        border-radius: 50%;
-        vertical-align: middle;
+        display: inline-block; width: 14px; height: 14px; margin-right: 8px; border-radius: 50%; vertical-align: middle;
       }
-
-      /* Optional: style the Leaflet controls */
       .leaflet-control-layers {
-        background: rgba(255, 255, 255, 0.9) !important;
-        border-radius: 8px !important;
-        padding: 6px !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
-        font-size: 14px;
+        background: rgba(255, 255, 255, 0.9) !important; border-radius: 8px !important; padding: 6px !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
       }
+      #incident-panel {
+        position: absolute; top: 80px; right: 10px; width: 260px; background: #fff; border-radius: 8px; padding: 10px; font-size: 13px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); z-index: 999;
+      }
+      #incident-log { height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; margin-bottom: 8px; background: #f9f9f9; }
+      #incident-log div { padding: 2px; margin-bottom: 3px; background: #eee; border-radius: 3px; }
+      #export-btn, #reset-btn { width: 100%; padding: 6px 0; border: none; color: #fff; border-radius: 4px; cursor: pointer; }
+      #export-btn { background: #007bff; }
+      #export-btn:hover { background: #0056b3; }
+      #reset-btn { background: #dc3545; margin-top: 6px; }
+      #reset-btn:hover { background: #bb2d3b; }
     </style>
   </head>
 
   <body>
     <h2>Oiken Network Risk Map</h2>
-
     <div id="map"></div>
-      <script type="text/javascript">
-        // Init map centered on Sion
-        var map = L.map("map", {
-          zoomSnap: 0.5,
-          zoomDelta: 0.5,
-          wheelPxPerZoomLevel: 60,
-        }).setView([46.23, 7.36], 11);
 
-        // Basemap
-        var osmLayer = L.tileLayer(
-          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          {
-            attribution: "&copy; OpenStreetMap contributors",
-          }
-        ).addTo(map);
-        
-        // --- CANTONS Layer ---
-        var cantonsLayer = L.layerGroup();
-        
-        $.getJSON("{% url 'cantonsjson' %}", function (data) {
-          L.geoJson(data, {
-            style: { color: "blue", weight: 2, fillOpacity: 0.1 },
-            interactive: false,
-          }).addTo(cantonsLayer);
-        });
+    <div id="incident-panel">
+      <h3>Incidents simulés</h3>
+      <div id="incident-log"></div>
+      <button id="export-btn">📁 Exporter GeoJSON</button>
+      <button id="reset-btn">🔁 Réinitialiser</button>
+    </div>
 
-        cantonsLayer.addTo(map);
+    <!-- === Carte et couches de base === -->
+    <script>
+      window.map = L.map("map").setView([46.23, 7.36], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(window.map);
 
-        // --- Network Lines Layer (from DB) ---
-        var networkLinesLayer = L.layerGroup();
+      // Layer groups
+      window.cantonsLayer = L.layerGroup().addTo(window.map);
+      window.networkLinesLayer = L.layerGroup().addTo(window.map);
+      window.nodesLayer = L.layerGroup().addTo(window.map);
+      window.incidentsLayer = L.geoJSON(null).addTo(window.map);
+      window.housesLayer = L.layerGroup().addTo(window.map);
 
-        $.getJSON("/swissgeo/network_lines.json", function (data) {
-          L.geoJson(data, {
-            style: { color: "orange", weight: 3 },
-            onEachFeature: function (feature, layer) {
-              layer.bindPopup("Network Line ID: " + feature.properties.networkline_id);
-            },
-          }).addTo(networkLinesLayer);
-        });
+      // Helper to load GeoJSON layers
+      const loadLayer = (url, opts, layer) =>
+        $.getJSON(url, (d) =>
+          L.geoJson(d, opts).eachLayer((lg) => layer.addLayer(lg))
+        );
 
-        networkLinesLayer.addTo(map);
+      // Cantons
+      loadLayer(
+        "{% url 'cantonsjson' %}",
+        {
+          style: { color: "blue", weight: 2, fillOpacity: 0.1 },
+          interactive: false,
+        },
+        window.cantonsLayer
+      );
 
-        // --- Nodes Layer (from DB) ---
-        var nodesLayer = L.layerGroup();
+      // Network lines
+      loadLayer(
+        "/swissgeo/network_lines.json",
+        {
+          style: { color: "orange", weight: 3 },
+          onEachFeature: (f, l) =>
+            l.bindPopup(`Line ID: ${f.properties.networkline_id}`),
+        },
+        window.networkLinesLayer
+      );
 
-        $.getJSON("/swissgeo/nodes.json", function (data) {
-          L.geoJson(data, {
-            pointToLayer: function (feature, latlng) {
-              return L.circleMarker(latlng, {
-                radius: 8,
-                fillColor: "green",
-                color: "#000",
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.8,
+      // Houses
+      loadLayer(
+        "{% url 'housesjson' %}",
+        {
+          style: { color: "purple", weight: 1, fillOpacity: 0.6 },
+          onEachFeature: (f, l) => l.bindPopup(`Name: ${f.properties.name}`),
+        },
+        window.housesLayer
+      );
+
+      // Incident points
+      loadLayer(
+        "/swissgeo/incidents.json",
+        {
+          pointToLayer: (f, ll) =>
+            L.circleMarker(ll, {
+              radius: 10,
+              fillColor: "red",
+              color: "#000",
+              fillOpacity: 0.9,
+            }),
+        },
+        window.incidentsLayer
+      );
+
+      // Nodes (with outage simulation logic!)
+      loadLayer(
+        "/swissgeo/nodes.json",
+        {
+          pointToLayer: (f, ll) =>
+            L.marker(ll, {
+              icon: L.icon({
+                iconUrl: "/static/icons/node.png",
+                iconSize: [25, 25],
+              }),
+            }),
+          onEachFeature: (f, l) => {
+            l.feature = f;
+            l.bindPopup(`Node ID: ${f.properties.node_id || f.properties.id}`);
+
+            // === OUTAGE/AFFECTED HOUSES LOGIC ===
+            l.on("click", function(e) {
+              // Optional: Reset all house styles first
+              window.housesLayer.eachLayer(function(houseLayer) {
+                houseLayer.setStyle({ fillColor: "purple", color: "#444" });
               });
-            },
-            onEachFeature: function (feature, layer) {
-              layer.bindPopup("Node ID: " + feature.properties.node_id);
-            },
-          }).addTo(nodesLayer);
-        });
 
-        nodesLayer.addTo(map);
+              // Node coordinates
+              const nodeLatLng = e.latlng;
+              const bufferMeters = 30; // Change this to adjust distance
 
-        // --- Incidents Layer ---
-        var incidentsLayer = L.layerGroup();
-
-        $.getJSON("/swissgeo/incidents.json", function (data) {
-          L.geoJson(data, {
-            pointToLayer: function (feature, latlng) {
-              return L.circleMarker(latlng, {
-                radius: 10,
-                fillColor: "red",
-                color: "#000",
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.9,
+              // Highlight affected houses (multipolygon-friendly!)
+              window.housesLayer.eachLayer(function(houseLayer) {
+                const polygons = houseLayer.getLatLngs();
+                let minDistance = Infinity;
+                polygons.forEach(function(polygon) {
+                  // polygon: array of rings, each ring is array of LatLngs
+                  polygon.forEach(function(ring) {
+                    ring.forEach(function(latlng) {
+                      const dist = nodeLatLng.distanceTo(latlng);
+                      if (dist < minDistance) minDistance = dist;
+                    });
+                  });
+                });
+                if (minDistance < bufferMeters) {
+                  houseLayer.setStyle({ fillColor: "red", color: "red" });
+                }
               });
-            },
-            onEachFeature: function (feature, layer) {
-              layer.bindPopup(
-                "<b>Incident ID:</b> " + feature.properties.incident_id
-              );
-            },
-          }).addTo(incidentsLayer);
+            });
+          },
+        },
+        window.nodesLayer
+      );
+
+      // Legend
+      const legend = L.control({ position: "bottomright" });
+      legend.onAdd = () => {
+        const d = L.DomUtil.create("div", "legend");
+        d.innerHTML += "<div><i style='background:orange'></i> Network Line</div>";
+        d.innerHTML += "<div><i style='background:blue;border-radius:0'></i> Swiss Canton</div>";
+        d.innerHTML += "<div><i style='background:green'></i> Network Node</div>";
+        d.innerHTML += "<div><i style='background:red'></i> Incident</div>";
+        d.innerHTML += "<div><i style='background:purple'></i> House</div>";
+        return d;
+      };
+      legend.addTo(window.map);
+
+      // Layer control
+      L.control
+        .layers(null, {
+          "Swiss Cantons": window.cantonsLayer,
+          "Network Lines": window.networkLinesLayer,
+          "Network Nodes": window.nodesLayer,
+          "Houses of Sion": window.housesLayer,
+          Incidents: window.incidentsLayer,
+        })
+        .addTo(window.map);
+
+      // === Reset logic: restore house colors ===
+      document.getElementById("reset-btn").addEventListener("click", function() {
+        window.housesLayer.eachLayer(function(houseLayer) {
+          houseLayer.setStyle({ fillColor: "purple", color: "#444" });
         });
-
-        incidentsLayer.addTo(map);
-
-        // --- Houses Layer ---
-        var housesLayer;
-
-        $.getJSON("{% url 'housesjson' %}", function (data) {
-          console.log("Houses GeoJSON loaded", data);
-        
-          var geojsonLayer = L.geoJson(data, {
-            style: { color: "purple", weight: 1, fillOpacity: 0.6 },
-            onEachFeature: function (feature, layer) {
-              console.log("Adding house feature:", feature);
-              layer.bindPopup("Name: " + feature.properties.name);
-            }
-          });
-        
-          window.housesLayer = L.layerGroup([geojsonLayer]);
-          window.housesLayer.addTo(map);
-        
-          // --- Layer Control ---
-          var overlays = {
-            "Swiss Cantons": cantonsLayer,
-            "Network Lines": networkLinesLayer,
-            "Network Nodes": nodesLayer,
-            "Houses of Sion": window.housesLayer,
-            "Incidents": incidentsLayer
-          };
-        
-          L.control.layers(null, overlays).addTo(map);
-        });
-
-        // --- Custom Legend ---
-        var legend = L.control({ position: "bottomright" });
-
-        legend.onAdd = function (map) {
-          var div = L.DomUtil.create("div", "legend");
-          div.innerHTML += "<div><i style='background: orange'></i> Network Line</div>";
-          div.innerHTML += "<div><i style='background: blue; border-radius: 0'></i> Swiss Canton</div>";
-          div.innerHTML += "<div><i style='background: green'></i> Network Node</div>";
-          div.innerHTML += "<div><i style='background: red'></i> Incident</div>";
-          div.innerHTML += "<div><i style='background: purple'></i> House</div>";
-          return div;
-        };
-
-        legend.addTo(map);
+      });
     </script>
   </body>
 </html>
